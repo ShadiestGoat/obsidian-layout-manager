@@ -1,0 +1,9 @@
+.lm-new-layout-container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-3)
+}
+
+.lm-new-layout-container textarea {
+	resize: vertical;
+}
