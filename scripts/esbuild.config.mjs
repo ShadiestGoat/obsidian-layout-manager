@@ -42,9 +42,11 @@ const context = await esbuild.context({
 	outdir: process.env.OUTPUT || "dist/",
 	entryNames: "[name]",
 	minify: prod,
+	absWorkingDir: process.env.PROJECT_DIR || process.cwd(),
 	plugins: [
 		esbuildSvelte({
 			compilerOptions: {
+				// TODO: Maybe this should be merged with styles.css...
 				css: 'injected',
 				runes: true,
 			},

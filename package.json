@@ -5,8 +5,8 @@
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
-		"dev": "node esbuild.config.mjs",
-		"build": "node esbuild.config.mjs production",
+		"dev": "node scripts/esbuild.config.mjs",
+		"build": "node scripts/esbuild.config.mjs production",
 		"format:check": "prettier --check ./src",
 		"format:fix": "prettier --write ./src",
 		"eslint:check": "eslint ./src",
