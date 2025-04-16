@@ -1,7 +1,7 @@
 {
   "id": "layout-manager",
   "name": "Layout Manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "minAppVersion": "0.15.0",
   "description": "Manage layouts with context",
   "author": "Lucy Dryaeva",
