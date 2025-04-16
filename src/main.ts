@@ -1,6 +1,6 @@
-import { FileView, Notice, Plugin, setIcon } from 'obsidian'
+import { FileView, Notice, Platform, Plugin, setIcon, WorkspaceLeaf } from 'obsidian'
 import { savableLayout, targetedLayout, type AnyContainer, type LayoutData } from './obsidianLayout'
-import type { SavedLayout, Settings } from './settings'
+import { PlatformMode, type SavedLayout, type Settings } from './settings'
 import { NewLayoutModal, OverrideLayoutModal } from './modals'
 import { minimatch } from 'minimatch'
 
@@ -72,58 +72,61 @@ export default class LayoutManager extends Plugin {
             this.updateState()
 
             this.registerEvent(
-                this.app.workspace.on('active-leaf-change', (l) => {
-                    const diffs = this.updateState()
-
-                    // Are we talking about a file?
-                    if (!l || !(l.view instanceof FileView) || !l.view.file) return
-                    // Debounce layout switching caused by us
-                    if (this.switching) return
-
-                    // Don't react to closing tabs when we are not tracking a layout
-                    if (
-                        this.originalLeafs.length == 0 &&
-                        Object.values(diffs).filter((v) => v[1] !== undefined).length === 0
-                    )
-                        return
-
-                    let shouldMatch = this.originalLeafs.length == 0
-                    for (const id of this.originalLeafs) {
-                        if (!diffs[id]) {
-                            continue
-                        }
-
-                        // One of the originals was removed: 'layout integrety' is broken
-                        if (diffs[id][1] === undefined) {
-                            this.setOriginals([])
-                            return
-                        }
-
-						shouldMatch = true
-
-                        break
-                    }
-
-					// Ensure an update so that if tabs are moved around, their icon is re-created
-                    this.setOriginals(this.originalLeafs)
-
-                    if (!shouldMatch) return
-
-                    const path = l.view.file.path
-
-                    const matched = this.findLayoutForPath(path)
-                    if (!matched) {
-                        this.setOriginals([])
-                        return
-                    }
-
-                    new Notice(`Using ${matched.name} layout!`)
-
-                    this.loadLayout(matched.container, path)
-                })
+				// Method got too big, lives in a seperate file now
+                this.app.workspace.on('active-leaf-change', (l) => this.onActiveLeafChange(l))
             )
         })
     }
+
+	onActiveLeafChange(l: WorkspaceLeaf | null) {
+		const diffs = this.updateState()
+
+		// Are we talking about a file?
+		if (!l || !(l.view instanceof FileView) || !l.view.file) return
+		// Debounce layout switching caused by us
+		if (this.switching) return
+
+		// Don't react to closing tabs when we are not tracking a layout
+		if (
+			this.originalLeafs.length == 0 &&
+			Object.values(diffs).filter((v) => v[1] !== undefined).length === 0
+		)
+			return
+
+		let shouldMatch = this.originalLeafs.length == 0
+		for (const id of this.originalLeafs) {
+			if (!diffs[id]) {
+				continue
+			}
+
+			// One of the originals was removed: 'layout integrety' is broken
+			if (diffs[id][1] === undefined) {
+				this.setOriginals([])
+				return
+			}
+
+			shouldMatch = true
+
+			break
+		}
+
+		// Ensure an update so that if tabs are moved around, their icon is re-created
+		this.setOriginals(this.originalLeafs)
+
+		if (!shouldMatch) return
+
+		const path = l.view.file.path
+
+		const matched = this.findLayoutForPath(path)
+		if (!matched) {
+			this.setOriginals([])
+			return
+		}
+
+		new Notice(`Using ${matched.name} layout!`)
+
+		this.loadLayout(matched.container, path)
+	}
 
     manageOriginalIcon(id: string, add: boolean) {
         // Its there... trust me...
@@ -190,6 +193,13 @@ export default class LayoutManager extends Plugin {
 
     findLayoutForPath(p: string): SavedLayout | null {
         for (const opt of this.settings) {
+			if (opt.platformMode == PlatformMode.COMPUTER && !Platform.isDesktop) {
+				continue
+			}
+			if (opt.platformMode == PlatformMode.MOBILE && !Platform.isMobile) {
+				continue
+			}
+
             for (const pattern of opt.patterns) {
                 if (minimatch(p, pattern)) {
                     return opt

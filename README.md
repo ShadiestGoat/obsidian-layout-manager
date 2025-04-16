@@ -1,8 +1,22 @@
-# Simple Password
+# Layout Manager
+
+TODOS:
+- [ ] Readme
+	- [ ] Docs - what are original leafs, etc
+	- [ ] The other stuff
+- [ ] Cleanup
+- [ ] Settings
+- [ ] Testing
+	- [ ] Just out an about testing
+	- [ ] Mobile testing
 
 TODO: :3
 
 ## Features
+
+TODO: :3
+
+## Who is this for? How is it different from Workspaces?
 
 TODO: :3
 
