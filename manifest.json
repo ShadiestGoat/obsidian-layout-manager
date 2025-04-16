@@ -1,10 +1,10 @@
 {
-	"id": "layout-manager",
-	"name": "Layout Manager",
-	"version": "1.0.1",
-	"minAppVersion": "0.15.0",
-	"description": "Manage layouts with context",
-	"author": "Lucy Dryaeva",
-	"authorUrl": "https://lucydryaeva.com",
-	"isDesktopOnly": false
+  "id": "layout-manager",
+  "name": "Layout Manager",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Manage layouts with context",
+  "author": "Lucy Dryaeva",
+  "authorUrl": "https://lucydryaeva.com",
+  "isDesktopOnly": false
 }
