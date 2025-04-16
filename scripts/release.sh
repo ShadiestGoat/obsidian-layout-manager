@@ -16,7 +16,7 @@ OUTPUT="$dist_dir" PROJECT_DIR="$(readlink -e "$base/..")" node "$base"/esbuild.
 git -C "$base/.." add './package.json'
 git -C "$base/.." add './manifest.json'
 git -C "$base/.." add './versions.json'
-git -C "$base/.." commit -m "Release $new_version"
+git -C "$base/.." commit -m "Release $new_version" --allow-empty
 git -C "$base/.." push
 git -C "$base/.." tag "$new_version" origin
 git -C "$base/.." push --tags
