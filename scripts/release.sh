@@ -21,7 +21,7 @@ git -C "$base/.." push
 git -C "$base/.." tag "$new_version" origin
 git -C "$base/.." push --tags
 
-gh release create "$new_version" --fail-on-no-commits --verify-tag --title "$new_version" --notes "" -R ShadiestGoat/obsidian-simple-password \
+gh release create "$new_version" --fail-on-no-commits --verify-tag --title "$new_version" --notes "" \
 	"$base"/../manifest.json \
 	"$dist_dir"/styles.css \
 	"$dist_dir"/main.js
