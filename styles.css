@@ -7,3 +7,7 @@
 .lm-new-layout-container textarea {
 	resize: vertical;
 }
+
+.workspace .mod-root .workspace-tab-header[data-type="markdown"] .workspace-tab-header-inner-icon.lm-original {
+	display: unset;
+}

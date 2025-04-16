@@ -1,72 +1,214 @@
-import { getFrontMatterInfo, Notice, Plugin } from 'obsidian'
-import type { AnyContainer, LayoutData } from './obsidianLayout'
+import { FileView, Notice, Plugin, setIcon } from 'obsidian'
+import { savableLayout, targetedLayout, type AnyContainer, type LayoutData } from './obsidianLayout'
 import type { SavedLayout, Settings } from './settings'
-import { NewLayoutModal } from './modals'
+import { NewLayoutModal, OverrideLayoutModal } from './modals'
 import { minimatch } from 'minimatch'
 
 export default class LayoutManager extends Plugin {
     settings: Settings
     switching = false
 
+    /** leaf id -> file path */
+    lastState = new Map<string, string>()
+    /**
+     * The original leaves created by this plugin
+     * If empty, treat all leaves as original
+     */
+    originalLeafs: string[] = []
+
     async onload(): Promise<void> {
-		await this.loadSettings()
+        await this.loadSettings()
 
         this.addCommand({
             id: 'save-layout',
             name: 'Save Layout',
             callback: () => {
-				const cont = this.getCurrentLayout()
-				if (!cont) {
-					return
-				}
+                const cont = this.getCurrentLayout()
+                if (!cont) {
+                    return
+                }
 
                 new NewLayoutModal(this.app, (name, paths, platMode) => {
-					this.settings.push({
-						container: cont,
-						name,
-						patterns: paths.split('\n').filter(v => !!v),
-						platformMode: platMode
-					})
-					this.saveSettings()
-				}).open()
+                    this.settings.push({
+                        container: cont,
+                        name,
+                        patterns: paths.split('\n').filter((v) => !!v),
+                        platformMode: platMode
+                    })
+                    this.saveSettings()
+                }).open()
             }
         })
 
-        this.registerEvent(
-            this.app.workspace.on('file-open', (f) => {
-                if (!f || this.switching || !this.settings) return
+        this.addCommand({
+            id: 'override-layuout',
+            name: 'Override Layout',
+            callback: () => {
+                const cont = this.getCurrentLayout()
+                if (!cont) {
+                    return
+                }
 
-				const matched = this.findLayoutForPath(f.path)
-				if (!matched) {
-					return
-				}
+                new OverrideLayoutModal(
+                    this.app,
+                    (name) => {
+                        const i = this.settings.findIndex((s) => s.name == name)
+                        if (i == -1) {
+                            new Notice("Can't find this Layout")
+                            return
+                        }
+                        this.settings[i].container = cont
 
-				this.loadLayout(matched.container, f.path)
-            })
-        )
+                        this.saveSettings()
+                    },
+                    { options: this.settings.map((s) => s.name) }
+                ).open()
+            }
+        })
+
+        this.register(() => this.setOriginals([]))
+
+        this.app.workspace.onLayoutReady(() => {
+            this.updateState()
+
+            this.registerEvent(
+                this.app.workspace.on('active-leaf-change', (l) => {
+                    const diffs = this.updateState()
+
+                    // Are we talking about a file?
+                    if (!l || !(l.view instanceof FileView) || !l.view.file) return
+                    // Debounce layout switching caused by us
+                    if (this.switching) return
+
+                    // Don't react to closing tabs when we are not tracking a layout
+                    if (
+                        this.originalLeafs.length == 0 &&
+                        Object.values(diffs).filter((v) => v[1] !== undefined).length === 0
+                    )
+                        return
+
+                    let shouldMatch = this.originalLeafs.length == 0
+                    for (const id of this.originalLeafs) {
+                        if (!diffs[id]) {
+                            continue
+                        }
+
+                        // One of the originals was removed: 'layout integrety' is broken
+                        if (diffs[id][1] === undefined) {
+                            this.setOriginals([])
+                            return
+                        }
+
+						shouldMatch = true
+
+                        break
+                    }
+
+					// Ensure an update so that if tabs are moved around, their icon is re-created
+                    this.setOriginals(this.originalLeafs)
+
+                    if (!shouldMatch) return
+
+                    const path = l.view.file.path
+
+                    const matched = this.findLayoutForPath(path)
+                    if (!matched) {
+                        this.setOriginals([])
+                        return
+                    }
+
+                    new Notice(`Using ${matched.name} layout!`)
+
+                    this.loadLayout(matched.container, path)
+                })
+            )
+        })
     }
 
-	findLayoutForPath(p: string): SavedLayout | null {
-		for (const opt of this.settings) {
-			for (const pattern of opt.patterns) {
-				if (minimatch(p, pattern)) {
-					return opt
-				}
-			}
-		}
+    manageOriginalIcon(id: string, add: boolean) {
+        // Its there... trust me...
+        const l = this.app.workspace.getLeafById(id) as { tabHeaderInnerIconEl: HTMLElement } | null
+        if (!l) return
 
-		return null
-	}
+        l.tabHeaderInnerIconEl.toggleClass('lm-original', add)
+        setIcon(l.tabHeaderInnerIconEl, add ? 'layout-dashboard' : 'file')
+    }
 
-	async saveSettings() {
-		return this.saveData(this.settings)
-	}
+    setOriginals(newOnes: string[]) {
+        console.log('Unloading', this.originalLeafs, newOnes)
 
-	async loadSettings() {
-		const d = (await this.loadData()) ?? []
+        // Cleanup or removed ones
+        this.originalLeafs.forEach((id) => {
+            if (!newOnes.contains(id)) this.manageOriginalIcon(id, false)
+        })
 
-		this.settings = Array.isArray(d) ? d : []
-	}
+        // Always refresh the new ones, even if they are present as part of old
+        // This is to ensure icon is always right
+        newOnes.forEach((id) => {
+            this.manageOriginalIcon(id, true)
+        })
+
+        this.originalLeafs = newOnes
+    }
+
+    /**
+     * @returns diffs
+     */
+    updateState(): Record<string, [string | undefined, string | undefined]> {
+        const curState = new Map<string, string>()
+
+        this.app.workspace.iterateRootLeaves((l) => {
+            if (!l || !(l.view instanceof FileView) || !l.view.file) {
+                return
+            }
+
+            curState.set(l.id, l.view.file?.path)
+        })
+
+        const diffs: Record<string, [string | undefined, string | undefined]> = {}
+
+        curState.forEach((v, k) => {
+            const old = this.lastState.get(k)
+            if (old != v) {
+                diffs[k] = [old, v]
+            }
+        })
+
+        this.lastState.forEach((v, k) => {
+            if (diffs[k]) {
+                return
+            }
+            if (!curState.has(k)) {
+                diffs[k] = [v, undefined]
+            }
+        })
+
+        this.lastState = curState
+
+        return diffs
+    }
+
+    findLayoutForPath(p: string): SavedLayout | null {
+        for (const opt of this.settings) {
+            for (const pattern of opt.patterns) {
+                if (minimatch(p, pattern)) {
+                    return opt
+                }
+            }
+        }
+
+        return null
+    }
+
+    async saveSettings() {
+        return this.saveData(this.settings)
+    }
+
+    async loadSettings() {
+        const d = (await this.loadData()) ?? []
+
+        this.settings = Array.isArray(d) ? d : []
+    }
 
     getCurrentLayout(): AnyContainer | null {
         const fileSet = new Set<string>()
@@ -87,9 +229,10 @@ export default class LayoutManager extends Plugin {
         const curLayout = this.app.workspace.getLayout() as LayoutData
 
         let activeId = curLayout.active
-        const main = targetedLayout(layout, path, (id) => (activeId = id))
+        const ogSet = new Set<string>()
+        const main = targetedLayout(layout, path, (id) => (activeId = id), ogSet)
 
-        this.app.workspace.changeLayout({
+        await this.app.workspace.changeLayout({
             ...curLayout,
             main: main,
             active: activeId
@@ -97,66 +240,8 @@ export default class LayoutManager extends Plugin {
 
         window.setTimeout(() => {
             this.switching = false
+
+            this.setOriginals(Array.from(ogSet))
         }, 300)
     }
-}
-
-function targetedLayout(l: AnyContainer, f: string, setActive: (id: string) => void): AnyContainer {
-    if (l.active) {
-        delete l.active
-        l.id = randomId(16)
-        setActive(l.id)
-    }
-
-    if (l.type != 'leaf') {
-        l.children?.forEach((c) => targetedLayout(c, f, setActive))
-        return l
-    }
-    if (l.state.type == 'markdown') {
-        l.state.state.file = f
-    }
-
-    return l
-}
-
-/**
- * Makes savable data out of the raw one
- * l becomes dirty after this, do not use it again.
- */
-function savableLayout(l: AnyContainer, fileSet: Set<string>, activeID: string): AnyContainer {
-    // This is basically js referance abuse, which is always fun & reliable & easy to debug :3
-
-    if (l.id == activeID) {
-        l.active = true
-    }
-
-    delete l.id
-
-    if (l.type == 'leaf') {
-        if (l.state.type == 'markdown') {
-            fileSet.add(l.state.state.file)
-
-            // @ts-expect-error Title causes issues
-            delete l.state.title
-
-            // Avoid saving extra metadata
-            l.state.state = {
-                file: '',
-                mode: l.state.state.mode,
-                source: l.state.state.source
-            }
-        }
-    } else {
-        l.children?.forEach((c) => savableLayout(c, fileSet, activeID))
-    }
-
-    return l
-}
-
-const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-function randomId(l: number) {
-    return Array.from(
-        { length: l },
-        () => possible[Math.floor(Math.random() * possible.length)]
-    ).join('')
 }

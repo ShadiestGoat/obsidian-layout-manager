@@ -15,7 +15,9 @@
 
 	onSubmit(name, paths, platMode)
 }}>
-	<input type="text" placeholder="Name" bind:value={name} />
+	<!-- svelte-ignore a11y_autofocus -->
+	<!-- This is only rendered in modals, which should be autofocused since it IS a jump -->
+	<input type="text" placeholder="Name" bind:value={name} autofocus />
 	<textarea placeholder="Paths (glob)" bind:value={paths}></textarea>
 	<select class="dropdown" bind:value={platMode}>
 		<option value={PlatformMode.BOTH}>Desktop & Mobile</option>
