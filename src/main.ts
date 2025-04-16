@@ -1,84 +1,92 @@
-import { FileView, Notice, Platform, Plugin, setIcon, WorkspaceLeaf } from 'obsidian'
+import type { WorkspaceLeaf } from 'obsidian'
+import { FileView, Notice, Platform, Plugin, setIcon } from 'obsidian'
 import { savableLayout, targetedLayout, type AnyContainer, type LayoutData } from './obsidianLayout'
 import { LayoutMgrSettings, PlatformMode, type SavedLayout, type SettingData } from './settings'
 import { NewLayoutModal, OverrideLayoutModal } from './modals'
 import { minimatch } from 'minimatch'
 
 export default class LayoutManager extends Plugin {
-    settings: SettingData
-    switching = false
+	settings: SettingData
+	switching = false
 
-    /** leaf id -> file path */
-    lastState = new Map<string, string>()
-    /**
-     * The original leaves created by this plugin
-     * If empty, treat all leaves as original
-     */
-    originalLeafs: string[] = []
+	/** leaf id -> file path */
+	lastState = new Map<string, string>()
+	/**
+	 * The original leaves created by this plugin
+	 * If empty, treat all leaves as original
+	 */
+	originalLeafs: string[] = []
 
-    async onload(): Promise<void> {
-        await this.loadSettings()
+	async onload(): Promise<void> {
+		await this.loadSettings()
 
-        this.addCommand({
-            id: 'save-layout',
-            name: 'Save Layout',
-            callback: () => {
-                const cont = this.getCurrentLayout()
-                if (!cont) {
-                    return
-                }
+		this.addCommand({
+			id: 'save-layout',
+			name: 'Save Layout',
+			callback: () => {
+				const cont = this.getCurrentLayout()
+				if (!cont) {
+					return
+				}
 
-                new NewLayoutModal(this.app, (name, paths, platMode) => {
-                    this.settings.push({
-                        container: cont,
-                        name,
-                        patterns: paths.split('\n').filter((v) => !!v).join("\n"),
-                        platformMode: platMode
-                    })
-                    this.saveSettings()
-                }, { otherNames: this.settings.map(s => s.name) }).open()
-            }
-        })
+				new NewLayoutModal(
+					this.app,
+					(name, paths, platMode) => {
+						this.settings.push({
+							container: cont,
+							name,
+							patterns: paths
+								.split('\n')
+								.filter((v) => !!v)
+								.join('\n'),
+							platformMode: platMode
+						})
+						this.saveSettings()
+					},
+					{ otherNames: this.settings.map((s) => s.name) }
+				).open()
+			}
+		})
 
-        this.addCommand({
-            id: 'override-layuout',
-            name: 'Override Layout',
-            callback: () => {
-                const cont = this.getCurrentLayout()
-                if (!cont) {
-                    return
-                }
+		this.addCommand({
+			id: 'override-layuout',
+			name: 'Override Layout',
+			callback: () => {
+				const cont = this.getCurrentLayout()
+				if (!cont) {
+					return
+				}
 
-                new OverrideLayoutModal(
-                    this.app,
-                    (name) => {
-                        const i = this.settings.findIndex((s) => s.name == name)
-                        if (i == -1) {
-                            new Notice("Can't find this Layout")
-                            return
-                        }
-                        this.settings[i].container = cont
+				new OverrideLayoutModal(
+					this.app,
+					(name) => {
+						const i = this.settings.findIndex((s) => s.name == name)
+						if (i == -1) {
+							new Notice("Can't find this Layout")
+							return
+						}
+						this.settings[i].container = cont
 
-                        this.saveSettings()
-                    },
-                    { options: this.settings.map((s) => s.name) }
-                ).open()
-            }
-        })
+						this.saveSettings()
+					},
+					{ options: this.settings.map((s) => s.name) }
+				).open()
+			}
+		})
 
-        this.register(() => this.setOriginals([]))
+		this.register(() => this.setOriginals([]))
 
-        this.app.workspace.onLayoutReady(() => {
-            this.updateState()
+		this.app.workspace.onLayoutReady(() => {
+			this.updateState()
 
-            this.registerEvent(
+			this.registerEvent(
 				// Method got too big, lives in a seperate file now
-                this.app.workspace.on('active-leaf-change', (l) => this.onActiveLeafChange(l))
-            )
-        })
+				this.app.workspace.on('active-leaf-change', (l) => this.onActiveLeafChange(l))
+			)
+		})
 
 		this.addSettingTab(new LayoutMgrSettings(this.app, this))
-    }
+	}
 
 	onActiveLeafChange(l: WorkspaceLeaf | null) {
 		const diffs = this.updateState()
@@ -130,71 +138,69 @@ export default class LayoutManager extends Plugin {
 		this.loadLayout(matched.container, path)
 	}
 
-    manageOriginalIcon(id: string, add: boolean) {
-        // Its there... trust me...
-        const l = this.app.workspace.getLeafById(id) as { tabHeaderInnerIconEl: HTMLElement } | null
-        if (!l) return
+	manageOriginalIcon(id: string, add: boolean) {
+		// Its there... trust me...
+		const l = this.app.workspace.getLeafById(id) as { tabHeaderInnerIconEl: HTMLElement } | null
+		if (!l) return
 
-        l.tabHeaderInnerIconEl.toggleClass('lm-original', add)
-        setIcon(l.tabHeaderInnerIconEl, add ? 'layout-dashboard' : 'file')
-    }
+		l.tabHeaderInnerIconEl.toggleClass('lm-original', add)
+		setIcon(l.tabHeaderInnerIconEl, add ? 'layout-dashboard' : 'file')
+	}
 
-    setOriginals(newOnes: string[]) {
-        console.log('Unloading', this.originalLeafs, newOnes)
+	setOriginals(newOnes: string[]) {
+		// Cleanup or removed ones
+		this.originalLeafs.forEach((id) => {
+			if (!newOnes.contains(id)) this.manageOriginalIcon(id, false)
+		})
 
-        // Cleanup or removed ones
-        this.originalLeafs.forEach((id) => {
-            if (!newOnes.contains(id)) this.manageOriginalIcon(id, false)
-        })
+		// Always refresh the new ones, even if they are present as part of old
+		// This is to ensure icon is always right
+		newOnes.forEach((id) => {
+			this.manageOriginalIcon(id, true)
+		})
 
-        // Always refresh the new ones, even if they are present as part of old
-        // This is to ensure icon is always right
-        newOnes.forEach((id) => {
-            this.manageOriginalIcon(id, true)
-        })
+		this.originalLeafs = newOnes
+	}
 
-        this.originalLeafs = newOnes
-    }
+	/**
+	 * @returns diffs
+	 */
+	updateState(): Record<string, [string | undefined, string | undefined]> {
+		const curState = new Map<string, string>()
 
-    /**
-     * @returns diffs
-     */
-    updateState(): Record<string, [string | undefined, string | undefined]> {
-        const curState = new Map<string, string>()
+		this.app.workspace.iterateRootLeaves((l) => {
+			if (!l || !(l.view instanceof FileView) || !l.view.file) {
+				return
+			}
 
-        this.app.workspace.iterateRootLeaves((l) => {
-            if (!l || !(l.view instanceof FileView) || !l.view.file) {
-                return
-            }
+			curState.set(l.id, l.view.file?.path)
+		})
 
-            curState.set(l.id, l.view.file?.path)
-        })
+		const diffs: Record<string, [string | undefined, string | undefined]> = {}
 
-        const diffs: Record<string, [string | undefined, string | undefined]> = {}
+		curState.forEach((v, k) => {
+			const old = this.lastState.get(k)
+			if (old != v) {
+				diffs[k] = [old, v]
+			}
+		})
 
-        curState.forEach((v, k) => {
-            const old = this.lastState.get(k)
-            if (old != v) {
-                diffs[k] = [old, v]
-            }
-        })
+		this.lastState.forEach((v, k) => {
+			if (diffs[k]) {
+				return
+			}
+			if (!curState.has(k)) {
+				diffs[k] = [v, undefined]
+			}
+		})
 
-        this.lastState.forEach((v, k) => {
-            if (diffs[k]) {
-                return
-            }
-            if (!curState.has(k)) {
-                diffs[k] = [v, undefined]
-            }
-        })
+		this.lastState = curState
 
-        this.lastState = curState
+		return diffs
+	}
 
-        return diffs
-    }
-
-    findLayoutForPath(p: string): SavedLayout | null {
-        for (const opt of this.settings) {
+	findLayoutForPath(p: string): SavedLayout | null {
+		for (const opt of this.settings) {
 			if (opt.platformMode == PlatformMode.COMPUTER && !Platform.isDesktop) {
 				continue
 			}
@@ -202,58 +208,58 @@ export default class LayoutManager extends Plugin {
 				continue
 			}
 
-            for (const pattern of opt.patterns.split("\n")) {
-                if (pattern && minimatch(p, pattern)) {
-                    return opt
-                }
-            }
-        }
+			for (const pattern of opt.patterns.split('\n')) {
+				if (pattern && minimatch(p, pattern)) {
+					return opt
+				}
+			}
+		}
 
-        return null
-    }
+		return null
+	}
 
-    async saveSettings() {
-        return this.saveData(this.settings)
-    }
+	async saveSettings() {
+		return this.saveData(this.settings)
+	}
 
-    async loadSettings() {
-        const d = (await this.loadData()) ?? []
+	async loadSettings() {
+		const d = (await this.loadData()) ?? []
 
-        this.settings = Array.isArray(d) ? d : []
-    }
+		this.settings = Array.isArray(d) ? d : []
+	}
 
-    getCurrentLayout(): AnyContainer | null {
-        const fileSet = new Set<string>()
-        const layoutData = this.app.workspace.getLayout() as LayoutData
+	getCurrentLayout(): AnyContainer | null {
+		const fileSet = new Set<string>()
+		const layoutData = this.app.workspace.getLayout() as LayoutData
 
-        const layout = savableLayout(layoutData.main, fileSet, layoutData.active)
-        if (fileSet.size > 1) {
-            new Notice("Can't save: multiple files found in layout")
-            return null
-        }
+		const layout = savableLayout(layoutData.main, fileSet, layoutData.active)
+		if (fileSet.size > 1) {
+			new Notice("Can't save: multiple files found in layout")
+			return null
+		}
 
-        return layout
-    }
+		return layout
+	}
 
-    async loadLayout(layout: AnyContainer, path: string) {
-        this.switching = true
+	async loadLayout(layout: AnyContainer, path: string) {
+		this.switching = true
 
-        const curLayout = this.app.workspace.getLayout() as LayoutData
+		const curLayout = this.app.workspace.getLayout() as LayoutData
 
-        let activeId = curLayout.active
-        const ogSet = new Set<string>()
-        const main = targetedLayout(layout, path, (id) => (activeId = id), ogSet)
+		let activeId = curLayout.active
+		const ogSet = new Set<string>()
+		const main = targetedLayout(layout, path, (id) => (activeId = id), ogSet)
 
-        await this.app.workspace.changeLayout({
-            ...curLayout,
-            main: main,
-            active: activeId
-        })
+		await this.app.workspace.changeLayout({
+			...curLayout,
+			main: main,
+			active: activeId
+		})
 
-        window.setTimeout(() => {
-            this.switching = false
+		window.setTimeout(() => {
+			this.switching = false
 
-            this.setOriginals(Array.from(ogSet))
-        }, 300)
-    }
+			this.setOriginals(Array.from(ogSet))
+		}, 300)
+	}
 }
