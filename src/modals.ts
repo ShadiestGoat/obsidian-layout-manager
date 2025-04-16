@@ -2,8 +2,9 @@ import type { App } from 'obsidian'
 import { Modal } from 'obsidian'
 import { mount, unmount, type Component } from 'svelte'
 import type { PlatformMode } from './settings'
-import NewLayout from './components/NewLayout.svelte'
-import OverrideLayout from './components/OverrideLayout.svelte'
+import NewLayout from './components/modals/NewLayout.svelte'
+import OverrideLayout from './components/modals/OverrideLayout.svelte'
+import Confirmation from './components/modals/Confirmation.svelte'
 
 abstract class genericSvelteModal<
     // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
@@ -36,7 +37,7 @@ abstract class genericSvelteModal<
             props: {
                 ...this.props,
                 [this.cbFuncName]: (...args: unknown[]) => {
-                    this.callback(args)
+                    this.callback(...args)
                     this.close()
                 }
             }
@@ -62,6 +63,15 @@ export class OverrideLayoutModal extends genericSvelteModal<
     typeof OverrideLayout
 > {
     title = 'Override Layout...'
-	cbFuncName = "asdasd"
     component = OverrideLayout
+}
+
+export type ConfirmationModalCallback = (confirmed: boolean) => void
+
+export class ConfirmModal extends genericSvelteModal<
+	ConfirmationModalCallback,
+    typeof Confirmation
+> {
+    title = 'Are you sure?'
+    component = Confirmation
 }

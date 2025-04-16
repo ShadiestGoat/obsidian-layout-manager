@@ -1,11 +1,11 @@
 import { FileView, Notice, Platform, Plugin, setIcon, WorkspaceLeaf } from 'obsidian'
 import { savableLayout, targetedLayout, type AnyContainer, type LayoutData } from './obsidianLayout'
-import { PlatformMode, type SavedLayout, type Settings } from './settings'
+import { LayoutMgrSettings, PlatformMode, type SavedLayout, type SettingData } from './settings'
 import { NewLayoutModal, OverrideLayoutModal } from './modals'
 import { minimatch } from 'minimatch'
 
 export default class LayoutManager extends Plugin {
-    settings: Settings
+    settings: SettingData
     switching = false
 
     /** leaf id -> file path */
@@ -32,11 +32,11 @@ export default class LayoutManager extends Plugin {
                     this.settings.push({
                         container: cont,
                         name,
-                        patterns: paths.split('\n').filter((v) => !!v),
+                        patterns: paths.split('\n').filter((v) => !!v).join("\n"),
                         platformMode: platMode
                     })
                     this.saveSettings()
-                }).open()
+                }, { otherNames: this.settings.map(s => s.name) }).open()
             }
         })
 
@@ -76,6 +76,8 @@ export default class LayoutManager extends Plugin {
                 this.app.workspace.on('active-leaf-change', (l) => this.onActiveLeafChange(l))
             )
         })
+
+		this.addSettingTab(new LayoutMgrSettings(this.app, this))
     }
 
 	onActiveLeafChange(l: WorkspaceLeaf | null) {
@@ -200,8 +202,8 @@ export default class LayoutManager extends Plugin {
 				continue
 			}
 
-            for (const pattern of opt.patterns) {
-                if (minimatch(p, pattern)) {
+            for (const pattern of opt.patterns.split("\n")) {
+                if (pattern && minimatch(p, pattern)) {
                     return opt
                 }
             }

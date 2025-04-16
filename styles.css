@@ -11,3 +11,30 @@
 .workspace .mod-root .workspace-tab-header[data-type="markdown"] .workspace-tab-header-inner-icon.lm-original {
 	display: unset;
 }
+
+.lm-settings {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-8);
+}
+
+.lm-setting-manage-container {
+	display: flex;
+	flex-direction: row;
+	gap: var(--size-4-2)
+}
+
+.lm-setting-manage-container .pad {
+	flex-grow: 1;
+}
+
+summary.lm-name h3 {
+	display: inline;
+}
+
+.lm-dividor {
+	width: 2px;
+	margin: var(--size-2-2) var(--size-4-1);
+	align-self: stretch;
+	background: var(--background-modifier-border);
+}
