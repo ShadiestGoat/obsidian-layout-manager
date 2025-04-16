@@ -92,7 +92,7 @@ export default class LayoutManager extends Plugin {
 		const diffs = this.updateState()
 
 		// Are we talking about a file?
-		if (!l || !(l.view instanceof FileView) || !l.view.file) return
+		if (!l) return
 		// Debounce layout switching caused by us
 		if (this.switching) return
 
@@ -119,6 +119,10 @@ export default class LayoutManager extends Plugin {
 
 			break
 		}
+
+		// We need to ensure we are talking to failes AFTER doing the diff checks
+		// Think replacing the view in a leaf from file to graph view
+		if (!(l.view instanceof FileView) || !l.view.file) return
 
 		// Ensure an update so that if tabs are moved around, their icon is re-created
 		this.setOriginals(this.originalLeafs)
