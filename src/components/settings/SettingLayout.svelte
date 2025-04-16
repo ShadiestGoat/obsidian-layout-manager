@@ -57,78 +57,81 @@
 			<p>Manage</p>
 			<div class="pad"></div>
 
-			{#if size > 1}
-				{#if size > 2}
+			<div class="lm-setting-manage-buttons">
+				{#if size > 1}
+					{#if size > 2}
+						<button
+							use:setIcon={'chevrons-up'}
+							{...buttonInteraction(() => changeOrder(0))}
+							class="mod-cta"
+							aria-label="Priorotize to top"
+							disabled={currentI == 0}
+						></button>
+					{/if}
 					<button
-						use:setIcon={'chevrons-up'}
-						{...buttonInteraction(() => changeOrder(0))}
+						use:setIcon={'chevron-up'}
+						{...buttonInteraction(() => changeOrder(currentI - 1))}
 						class="mod-cta"
-						aria-label="Priorotize to top"
+						aria-label="Priorotize"
 						disabled={currentI == 0}
 					></button>
-				{/if}
-				<button
-					use:setIcon={'chevron-up'}
-					{...buttonInteraction(() => changeOrder(currentI - 1))}
-					class="mod-cta"
-					aria-label="Priorotize"
-					disabled={currentI == 0}
-				></button>
-				<button
-					use:setIcon={'chevron-down'}
-					{...buttonInteraction(() => changeOrder(currentI + 1))}
-					class="mod-cta"
-					aria-label="Depriorotize"
-					disabled={currentI == size - 1}
-				></button>
-				{#if size > 2}
 					<button
-						use:setIcon={'chevrons-down'}
-						{...buttonInteraction(() => changeOrder(size - 1))}
+						use:setIcon={'chevron-down'}
+						{...buttonInteraction(() => changeOrder(currentI + 1))}
 						class="mod-cta"
-						aria-label="Depriorotize to bottom"
+						aria-label="Depriorotize"
 						disabled={currentI == size - 1}
 					></button>
+					{#if size > 2}
+						<button
+							use:setIcon={'chevrons-down'}
+							{...buttonInteraction(() => changeOrder(size - 1))}
+							class="mod-cta"
+							aria-label="Depriorotize to bottom"
+							disabled={currentI == size - 1}
+						></button>
+					{/if}
 				{/if}
-			{/if}
-
-			{#if editingTitle}
+	
+				{#if editingTitle}
+					<button
+						use:setIcon={'check'}
+						{...buttonInteraction(() => {
+							editingTitle = false
+							option.name = tmpValue.trim()
+						})}
+						class="mod-cta"
+						aria-label="Save"
+						disabled={tmpValue.length === 0 || otherNames.contains(tmpValue)}
+					></button>
+					<button
+						use:setIcon={'x'}
+						{...buttonInteraction(() => {
+							editingTitle = false
+							tmpValue = option.name
+						})}
+						aria-label="Cancel"
+					></button>
+				{:else}
+					<button
+						use:setIcon={'pencil'}
+						{...buttonInteraction(() => {
+							editingTitle = true
+							tmpValue = option.name
+						})}
+						aria-label="Being Editing Name"
+					></button>
+				{/if}
+	
+				<div class="lm-dividor"></div>
+	
 				<button
-					use:setIcon={'check'}
-					{...buttonInteraction(() => {
-						editingTitle = false
-						option.name = tmpValue.trim()
-					})}
-					class="mod-cta"
-					aria-label="Save"
-					disabled={tmpValue.length === 0 || otherNames.contains(tmpValue)}
+					use:setIcon={'trash-2'}
+					{...buttonInteraction(() => deleteSelf())}
+					aria-label="Delete Layout"
 				></button>
-				<button
-					use:setIcon={'x'}
-					{...buttonInteraction(() => {
-						editingTitle = false
-						tmpValue = option.name
-					})}
-					aria-label="Cancel"
-				></button>
-			{:else}
-				<button
-					use:setIcon={'pencil'}
-					{...buttonInteraction(() => {
-						editingTitle = true
-						tmpValue = option.name
-					})}
-					aria-label="Being Editing Name"
-				></button>
-			{/if}
+			</div>
 
-			<div class="lm-dividor"></div>
-
-			<button
-				use:setIcon={'trash-2'}
-				{...buttonInteraction(() => deleteSelf())}
-				aria-label="Delete Layout"
-			></button>
 		</div>
 
 		<SettingItem

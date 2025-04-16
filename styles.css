@@ -18,12 +18,6 @@
 	gap: var(--size-4-8);
 }
 
-.lm-setting-manage-container {
-	display: flex;
-	flex-direction: row;
-	gap: var(--size-4-2)
-}
-
 .lm-setting-manage-container .pad {
 	flex-grow: 1;
 }
@@ -37,4 +31,10 @@ summary.lm-name h3 {
 	margin: var(--size-2-2) var(--size-4-1);
 	align-self: stretch;
 	background: var(--background-modifier-border);
+}
+
+.lm-setting-manage-buttons {
+	display: flex;
+	flex-direction: row;
+	gap: var(--size-4-2)
 }

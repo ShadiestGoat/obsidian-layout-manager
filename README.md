@@ -5,7 +5,6 @@ TODOS:
 	- [ ] Docs - what are original leafs, etc
 	- [ ] The other stuff
 - [ ] Cleanup
-- [ ] Settings
 - [ ] Testing
 	- [ ] Just out an about testing
 	- [ ] Mobile testing
