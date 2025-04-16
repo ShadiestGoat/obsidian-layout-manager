@@ -23,5 +23,5 @@ git -C "$base/.." push --tags
 
 gh release create "$new_version" --fail-on-no-commits --verify-tag --title "$new_version" --notes "" -R ShadiestGoat/obsidian-simple-password \
 	"$base"/../manifest.json \
-	"$dist_dir"/main.js \
-	"$base"/styles.css
+	"$dist_dir"/styles.css \
+	"$dist_dir"/main.js
