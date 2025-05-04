@@ -12,12 +12,17 @@ export enum PlatformMode {
 	MOBILE = 'mobile'
 }
 
-export interface SavedLayout {
-	platformMode: PlatformMode
+export interface SavedContainerData {
 	container: AnyContainer
+	activeId?: string
+	leafIds: string[]
+}
+
+export type SavedLayout = {
+	platformMode: PlatformMode
 	name: string
 	patterns: string
-}
+} & SavedContainerData
 
 export type SettingData = SavedLayout[]
 

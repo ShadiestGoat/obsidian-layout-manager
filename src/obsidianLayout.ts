@@ -15,8 +15,7 @@ export type AnyContainer =
 	| GenericContainer<'tabs'>
 
 export type GenericContainer<N extends keyof KnownContainers> = {
-	id?: string
-	active?: boolean
+	id: string
 	type: N
 	children?: AnyContainer[]
 } & KnownContainers[N]
@@ -44,25 +43,11 @@ export type LayoutData = {
 export function targetedLayout(
 	l: AnyContainer,
 	f: string,
-	setActive: (id: string) => void,
-	ogSet: Set<string>
 ): AnyContainer {
-	if (l.active) {
-		delete l.active
-		l.id = randomId(16)
-		setActive(l.id)
-	}
-
 	if (l.type != 'leaf') {
-		l.children?.forEach((c) => targetedLayout(c, f, setActive, ogSet))
+		l.children?.forEach((c) => targetedLayout(c, f))
 		return l
 	}
-
-	if (!l.active) {
-		l.id = randomId(16)
-	}
-
-	ogSet.add(l.id as string)
 
 	if (l.state.type == 'markdown') {
 		l.state.state.file = f
@@ -78,24 +63,20 @@ export function targetedLayout(
 export function savableLayout(
 	l: AnyContainer,
 	fileSet: Set<string>,
-	activeID: string
+	leafCb: (id: string) => void,
 ): AnyContainer {
 	// This is basically js referance abuse, which is always fun & reliable & easy to debug :3
-
-	if (l.id == activeID) {
-		l.active = true
-	}
-
-	delete l.id
-
 	if (l.type == 'leaf') {
+		leafCb(l.id)
+
 		if (l.state.type == 'markdown') {
 			fileSet.add(l.state.state.file)
 
-			// @ts-expect-error Title causes issues
+			// Avoid saving extra metadata, set bare minimums. It all gets re-calculated anyways
+
+			// @ts-expect-error title is required, but it does get recalculated so this will be fine
 			delete l.state.title
 
-			// Avoid saving extra metadata, set bare minimums
 			l.state.state = {
 				file: '',
 				mode: l.state.state.mode,
@@ -103,16 +84,8 @@ export function savableLayout(
 			}
 		}
 	} else {
-		l.children?.forEach((c) => savableLayout(c, fileSet, activeID))
+		l.children?.forEach((c) => savableLayout(c, fileSet, leafCb))
 	}
 
 	return l
-}
-
-const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-function randomId(l: number) {
-	return Array.from(
-		{ length: l },
-		() => possible[Math.floor(Math.random() * possible.length)]
-	).join('')
 }

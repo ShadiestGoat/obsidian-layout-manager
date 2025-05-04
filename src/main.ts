@@ -1,7 +1,7 @@
 import type { WorkspaceLeaf } from 'obsidian'
 import { FileView, Notice, Platform, Plugin, setIcon } from 'obsidian'
-import { savableLayout, targetedLayout, type AnyContainer, type LayoutData } from './obsidianLayout'
-import { LayoutMgrSettings, PlatformMode, type SavedLayout, type SettingData } from './settings'
+import { savableLayout, targetedLayout } from './obsidianLayout'
+import { LayoutMgrSettings, PlatformMode, type SavedContainerData, type SavedLayout, type SettingData } from './settings'
 import { NewLayoutModal, OverrideLayoutModal } from './modals'
 import { minimatch } from 'minimatch'
 
@@ -15,7 +15,7 @@ export default class LayoutManager extends Plugin {
 	 * The original leaves created by this plugin
 	 * If empty, treat all leaves as original
 	 */
-	originalLeafs: string[] = []
+	originalLeafs: Set<string> = new Set()
 
 	async onload(): Promise<void> {
 		await this.loadSettings()
@@ -33,13 +33,13 @@ export default class LayoutManager extends Plugin {
 					this.app,
 					(name, paths, platMode) => {
 						this.settings.push({
-							container: cont,
 							name,
 							patterns: paths
 								.split('\n')
 								.filter((v) => !!v)
 								.join('\n'),
-							platformMode: platMode
+							platformMode: platMode,
+							...cont,
 						})
 						this.saveSettings()
 					},
@@ -65,7 +65,7 @@ export default class LayoutManager extends Plugin {
 							new Notice("Can't find this Layout")
 							return
 						}
-						this.settings[i].container = cont
+						this.settings[i] = {...this.settings[i], ...cont}
 
 						this.saveSettings()
 					},
@@ -98,12 +98,12 @@ export default class LayoutManager extends Plugin {
 
 		// Don't react to closing tabs when we are not tracking a layout
 		if (
-			this.originalLeafs.length == 0 &&
+			this.originalLeafs.size == 0 &&
 			Object.values(diffs).filter((v) => v[1] !== undefined).length === 0
 		)
 			return
 
-		let shouldMatch = this.originalLeafs.length == 0
+		let shouldMatch = this.originalLeafs.size == 0
 		for (const id of this.originalLeafs) {
 			if (!diffs[id]) {
 				continue
@@ -125,7 +125,7 @@ export default class LayoutManager extends Plugin {
 		if (!(l.view instanceof FileView) || !l.view.file) return
 
 		// Ensure an update so that if tabs are moved around, their icon is re-created
-		this.setOriginals(this.originalLeafs)
+		this.runOriginals()
 
 		if (!shouldMatch) return
 
@@ -139,7 +139,7 @@ export default class LayoutManager extends Plugin {
 
 		new Notice(`Using ${matched.name} layout!`)
 
-		this.loadLayout(matched.container, path)
+		this.loadLayout(matched, path)
 	}
 
 	manageOriginalIcon(id: string, add: boolean) {
@@ -151,19 +151,20 @@ export default class LayoutManager extends Plugin {
 		setIcon(l.tabHeaderInnerIconEl, add ? 'layout-dashboard' : 'file')
 	}
 
+	runOriginals() {
+		this.originalLeafs.forEach((id) => {
+			this.manageOriginalIcon(id, true)
+		})
+	}
+
 	setOriginals(newOnes: string[]) {
 		// Cleanup or removed ones
 		this.originalLeafs.forEach((id) => {
 			if (!newOnes.contains(id)) this.manageOriginalIcon(id, false)
 		})
 
-		// Always refresh the new ones, even if they are present as part of old
-		// This is to ensure icon is always right
-		newOnes.forEach((id) => {
-			this.manageOriginalIcon(id, true)
-		})
-
-		this.originalLeafs = newOnes
+		this.originalLeafs = new Set(newOnes)
+		this.runOriginals()
 	}
 
 	/**
@@ -232,38 +233,70 @@ export default class LayoutManager extends Plugin {
 		this.settings = Array.isArray(d) ? d : []
 	}
 
-	getCurrentLayout(): AnyContainer | null {
+	getCurrentLayout(): SavedContainerData | null {
 		const fileSet = new Set<string>()
-		const layoutData = this.app.workspace.getLayout() as LayoutData
+		const leafIds: string[] = []
+		const layoutData = this.app.workspace.rootSplit.serialize()
+		let activeId: string | undefined
 
-		const layout = savableLayout(layoutData.main, fileSet, layoutData.active)
+		const layout = savableLayout(layoutData, fileSet, (id) => {
+			leafIds.push(id)
+			if (id === this.app.workspace.activeLeaf?.id) {
+				activeId = id
+			}
+		})
 		if (fileSet.size > 1) {
 			new Notice("Can't save: multiple files found in layout")
 			return null
 		}
 
-		return layout
+		return {
+			container: layout,
+			activeId,
+			leafIds,
+		}
 	}
 
-	async loadLayout(layout: AnyContainer, path: string) {
+	/** Loads a layout, replacing any files with {path} */
+	async loadLayout({ activeId, leafIds, container }: SavedContainerData, path: string) {
 		this.switching = true
 
-		const curLayout = this.app.workspace.getLayout() as LayoutData
+		const main = targetedLayout(container, path)
 
-		let activeId = curLayout.active
-		const ogSet = new Set<string>()
-		const main = targetedLayout(layout, path, (id) => (activeId = id), ogSet)
+		const w = this.app.workspace
 
-		await this.app.workspace.changeLayout({
-			...curLayout,
-			main: main,
-			active: activeId
+		w.layoutReady = false
+
+		const rootLeaf = await this.app.workspace.deserializeLayout(main, "root")
+		rootLeaf.containerEl.addClass("mod-root")
+		rootLeaf.recomputeChildrenDimensions()
+		w.rootSplit = rootLeaf
+
+		if (Platform.isMobile) {
+			w.containerEl.children[1].replaceWith(rootLeaf.containerEl)
+		} else {
+			w.containerEl.children[2].replaceWith(rootLeaf.containerEl)
+		}
+
+		if (activeId) {
+			const l = w.getLeafById(activeId)
+			if (l) w.setActiveLeaf(l)
+		}
+
+		const deferredLoaders: Promise<unknown>[] = []
+		w.iterateRootLeaves(function (l: WorkspaceLeaf) {
+			if (l.isVisible()) deferredLoaders.push(l.loadIfDeferred())
 		})
 
-		window.setTimeout(() => {
-			this.switching = false
+		await Promise.all(deferredLoaders)
+		this.updateState()
 
-			this.setOriginals(Array.from(ogSet))
-		}, 300)
+		w.layoutReady = true
+
+		w.onLayoutChange()
+		w.requestActiveLeafEvents()
+
+		this.setOriginals(leafIds)
+		this.switching = false
 	}
 }
