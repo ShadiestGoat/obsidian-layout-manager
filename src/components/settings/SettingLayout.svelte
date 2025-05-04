@@ -92,7 +92,7 @@
 						></button>
 					{/if}
 				{/if}
-	
+
 				{#if editingTitle}
 					<button
 						use:setIcon={'check'}
@@ -119,23 +119,23 @@
 							editingTitle = true
 							tmpValue = option.name
 						})}
-						aria-label="Being Editing Name"
+						aria-label="Being editing name"
 					></button>
 				{/if}
-	
+
 				<div class="lm-dividor"></div>
-	
+
 				<button
 					use:setIcon={'trash-2'}
 					{...buttonInteraction(() => deleteSelf())}
-					aria-label="Delete Layout"
+					aria-label="Delete layout"
 				></button>
 			</div>
 
 		</div>
 
 		<SettingItem
-			name="Glob Patterns"
+			name="Glob patterns"
 			desc="If a pattern matches, this layout will be used. Each line is a new pattern"
 		>
 			<textarea bind:value={option.patterns} placeholder="Patterns (glob)"></textarea>

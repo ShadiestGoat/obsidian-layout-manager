@@ -7,6 +7,7 @@ declare module 'obsidian' {
 	interface WorkspaceLeaf {
 		id: string
 		isVisible(): boolean
+		tabHeaderInnerIconEl: HTMLElement
 	}
 
 	interface WorkspaceRoot {

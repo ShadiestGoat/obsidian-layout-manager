@@ -52,7 +52,7 @@ abstract class genericSvelteModal<
 export type NewLayoutCallback = (name: string, paths: string, platformMode: PlatformMode) => void
 
 export class NewLayoutModal extends genericSvelteModal<NewLayoutCallback, typeof NewLayout> {
-	title = 'New Layout...'
+	title = 'New layout'
 	component = NewLayout
 }
 
@@ -62,7 +62,7 @@ export class OverrideLayoutModal extends genericSvelteModal<
 	OverrideLayoutCallback,
 	typeof OverrideLayout
 > {
-	title = 'Override Layout...'
+	title = 'Override layout'
 	component = OverrideLayout
 }
 

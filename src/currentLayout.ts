@@ -18,8 +18,7 @@ export class StateMgr {
 	}
 
 	private manageOriginalIcon(id: string, add: boolean) {
-		// Its there... trust me...
-		const l = this.app.workspace.getLeafById(id) as WorkspaceLeaf & { tabHeaderInnerIconEl: HTMLElement } | null
+		const l = this.app.workspace.getLeafById(id)
 		if (!l) return
 
 		l.tabHeaderInnerIconEl.toggleClass('lm-original', add)

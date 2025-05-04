@@ -6,6 +6,6 @@
 
 <select class="dropdown" bind:value>
 	<option value={PlatformMode.BOTH}>Desktop & Mobile</option>
-	<option value={PlatformMode.COMPUTER}>Desktop Only</option>
-	<option value={PlatformMode.MOBILE}>Mobile Only</option>
+	<option value={PlatformMode.COMPUTER}>Desktop only</option>
+	<option value={PlatformMode.MOBILE}>Mobile only</option>
 </select>

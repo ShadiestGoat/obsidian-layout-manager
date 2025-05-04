@@ -15,7 +15,7 @@
 >
 	<select class="dropdown" bind:value={name}>
 		{#each options as opt (opt)}
-			<option value="opt">{opt}</option>
+			<option>{opt}</option>
 		{/each}
 	</select>
 
