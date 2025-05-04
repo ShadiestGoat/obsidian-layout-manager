@@ -1,9 +1,9 @@
 import type { App } from 'obsidian'
-import { Modal } from 'obsidian'
+import { Modal, Notice } from 'obsidian'
 import { mount, unmount, type Component } from 'svelte'
-import type { PlatformMode } from './settings'
+import type { PlatformMode, SavedLayout, SettingData } from './settings'
 import NewLayout from './components/modals/NewLayout.svelte'
-import OverrideLayout from './components/modals/OverrideLayout.svelte'
+import PickLayout from './components/modals/PickLayout.svelte'
 import Confirmation from './components/modals/Confirmation.svelte'
 
 abstract class genericSvelteModal<
@@ -26,6 +26,7 @@ abstract class genericSvelteModal<
 
 		this.callback = cb
 		this.props = { ...this.props, ...props }
+		this.open()
 	}
 
 	onOpen(): void {
@@ -56,14 +57,37 @@ export class NewLayoutModal extends genericSvelteModal<NewLayoutCallback, typeof
 	component = NewLayout
 }
 
-export type OverrideLayoutCallback = (name: string) => void
+export type PickLayoutCallback = (name: string) => void
 
-export class OverrideLayoutModal extends genericSvelteModal<
-	OverrideLayoutCallback,
-	typeof OverrideLayout
-> {
+abstract class PickLayoutModal extends genericSvelteModal<PickLayoutCallback, typeof PickLayout> {
+	component = PickLayout
+
+	constructor(app: App, settings: SettingData, cb: (l: SavedLayout) => void) {
+		super(app, (name) => {
+			const i = settings.findIndex((s) => s.name == name)
+			if (i == -1) {
+				new Notice("Can't find this layout")
+				return
+			}
+			cb(settings[i])
+		}, {
+			options: settings.map(o => o.name)
+		})
+	}
+}
+
+export class LoadLayoutModal extends PickLayoutModal {
+	title = 'Pick layout'
+	props = {
+		submitText: 'Load'
+	}
+}
+
+export class OverrideLayoutModal extends PickLayoutModal {
 	title = 'Override layout'
-	component = OverrideLayout
+	props = {
+		submitText: 'Save'
+	}
 }
 
 export type ConfirmationModalCallback = (confirmed: boolean) => void

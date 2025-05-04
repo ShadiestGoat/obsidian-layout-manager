@@ -1,6 +1,5 @@
-import type { WorkspaceLeaf } from 'obsidian'
-import { FileView, Notice, Platform, Plugin, setIcon } from 'obsidian'
-import { savableLayout, targetedLayout } from './obsidianLayout'
+import { Notice, Platform, Plugin } from 'obsidian'
+import { savableLayout } from './obsidianLayout'
 import {
 	LayoutMgrSettings,
 	PlatformMode,
@@ -8,7 +7,7 @@ import {
 	type SavedLayout,
 	type SettingData
 } from './settings'
-import { NewLayoutModal, OverrideLayoutModal } from './modals'
+import { NewLayoutModal, OverrideLayoutModal, LoadLayoutModal } from './modals'
 import { minimatch } from 'minimatch'
 import { StateMgr } from './currentLayout'
 
@@ -28,12 +27,7 @@ export default class LayoutManager extends Plugin {
 		this.addCommand({
 			id: 'save-layout',
 			name: 'Save Layout',
-			callback: () => {
-				const cont = this.getCurrentLayout()
-				if (!cont) {
-					return
-				}
-
+			editorCheckCallback: this.layoutManagingCheckCmd((cont) => {
 				new NewLayoutModal(
 					this.app,
 					(name, paths, platMode) => {
@@ -49,33 +43,37 @@ export default class LayoutManager extends Plugin {
 						this.saveSettings()
 					},
 					{ otherNames: this.settings.map((s) => s.name) }
-				).open()
-			}
+				)
+			})
 		})
 
 		this.addCommand({
 			id: 'override-layuout',
 			name: 'Override Layout',
-			callback: () => {
-				const cont = this.getCurrentLayout()
-				if (!cont) {
-					return
+			editorCheckCallback: this.layoutManagingCheckCmd((cont) => {
+				new OverrideLayoutModal(this.app, this.settings, (sv) => {
+					Object.assign(sv, cont)
+					this.saveSettings()
+				})
+			})
+		})
+
+		this.addCommand({
+			id: 'load-layuout',
+			name: 'Load Adhoc Layout',
+			editorCheckCallback: (checking) => {
+				const activeFile = this.app.workspace.getActiveFile()
+				if (!activeFile) {
+					return false
+				}
+				if (!checking) {
+					const path = activeFile.path
+					new LoadLayoutModal(this.app, this.settings, (sv) => {
+						this.loadLayout(sv, path)
+					})
 				}
 
-				new OverrideLayoutModal(
-					this.app,
-					(name) => {
-						const i = this.settings.findIndex((s) => s.name == name)
-						if (i == -1) {
-							new Notice("Can't find this Layout")
-							return
-						}
-						this.settings[i] = { ...this.settings[i], ...cont }
-
-						this.saveSettings()
-					},
-					{ options: this.settings.map((s) => s.name) }
-				).open()
+				return true
 			}
 		})
 
@@ -84,14 +82,23 @@ export default class LayoutManager extends Plugin {
 		this.app.workspace.onLayoutReady(() => {
 			this.curLayout.shouldUpdate()
 
-			this.registerEvent(
-				this.app.workspace.on('active-leaf-change', () => this.onStateChange())
-			)
-
 			this.registerEvent(this.app.workspace.on('layout-change', () => this.onStateChange()))
 		})
 
 		this.addSettingTab(new LayoutMgrSettings(this.app, this))
+	}
+
+	layoutManagingCheckCmd(cb: (cont: SavedContainerData) => void): (checking: boolean) => boolean {
+		return (checking: boolean): boolean => {
+			const cont = this.getCurrentLayout()
+			if (!cont) {
+				return false
+			}
+
+			if (!checking) cb(cont)
+
+			return true
+		}
 	}
 
 	onStateChange() {

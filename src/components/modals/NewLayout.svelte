@@ -25,7 +25,7 @@
 	<textarea placeholder="Paths (glob)" bind:value={paths}></textarea>
 	<PlatformDropdown bind:value={platMode} />
 
-	<button disabled={!name || !paths || otherNames.contains(name)} type="submit" class="mod-cta"
-		>Save</button
-	>
+	<button disabled={!name || otherNames.contains(name)} type="submit" class="mod-cta">
+		Save
+	</button>
 </form>

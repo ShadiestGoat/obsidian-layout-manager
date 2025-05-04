@@ -31,7 +31,7 @@
 					$settings = $settings
 				},
 				{ desc: `This will delete the layout '${l.name}'` }
-			).open()
+			)
 		}}
 	/>
 {/each}
