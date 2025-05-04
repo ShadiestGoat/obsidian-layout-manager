@@ -154,10 +154,10 @@ export class StateMgr {
 
 		for (const leafId in diffs) {
 			const newPath = diffs[leafId][1]
-
 			if (!newPath) continue
-			if (this.active && newPath === this.file) {
-				continue
+
+			if (this.active) {
+				if (newPath == this.file || diffs[leafId][0] === undefined) continue
 			}
 
 			return newPath
