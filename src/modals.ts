@@ -18,6 +18,7 @@ abstract class genericSvelteModal<
 	cbFuncName = 'onSubmit'
 	props: Partial<P> = {}
 
+	private inputProps: Partial<P> = {}
 	abstract title: string
 	abstract component: C
 
@@ -25,8 +26,7 @@ abstract class genericSvelteModal<
 		super(app)
 
 		this.callback = cb
-		this.props = { ...this.props, ...props }
-		this.open()
+		this.inputProps = props
 	}
 
 	onOpen(): void {
@@ -37,6 +37,7 @@ abstract class genericSvelteModal<
 			target: this.contentEl,
 			props: {
 				...this.props,
+				...this.inputProps,
 				[this.cbFuncName]: (...args: unknown[]) => {
 					this.callback(...args)
 					this.close()
@@ -73,6 +74,7 @@ abstract class PickLayoutModal extends genericSvelteModal<PickLayoutCallback, ty
 		}, {
 			options: settings.map(o => o.name)
 		})
+		console.log("Post props", this.props)
 	}
 }
 

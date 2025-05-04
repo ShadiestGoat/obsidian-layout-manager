@@ -1,4 +1,4 @@
-import { Notice, Platform, Plugin } from 'obsidian'
+import { FileView, Notice, Platform, Plugin } from 'obsidian'
 import { savableLayout } from './obsidianLayout'
 import {
 	LayoutMgrSettings,
@@ -27,7 +27,7 @@ export default class LayoutManager extends Plugin {
 		this.addCommand({
 			id: 'save-layout',
 			name: 'Save Layout',
-			editorCheckCallback: this.layoutManagingCheckCmd((cont) => {
+			checkCallback: this.layoutManagingCheckCmd((cont) => {
 				new NewLayoutModal(
 					this.app,
 					(name, paths, platMode) => {
@@ -43,25 +43,25 @@ export default class LayoutManager extends Plugin {
 						this.saveSettings()
 					},
 					{ otherNames: this.settings.map((s) => s.name) }
-				)
+				).open()
 			})
 		})
 
 		this.addCommand({
 			id: 'override-layuout',
 			name: 'Override Layout',
-			editorCheckCallback: this.layoutManagingCheckCmd((cont) => {
+			checkCallback: this.layoutManagingCheckCmd((cont) => {
 				new OverrideLayoutModal(this.app, this.settings, (sv) => {
 					Object.assign(sv, cont)
 					this.saveSettings()
-				})
+				}).open()
 			})
 		})
 
 		this.addCommand({
 			id: 'load-layuout',
 			name: 'Load Adhoc Layout',
-			editorCheckCallback: (checking) => {
+			checkCallback: (checking) => {
 				const activeFile = this.app.workspace.getActiveFile()
 				if (!activeFile) {
 					return false
@@ -70,7 +70,7 @@ export default class LayoutManager extends Plugin {
 					const path = activeFile.path
 					new LoadLayoutModal(this.app, this.settings, (sv) => {
 						this.loadLayout(sv, path)
-					})
+					}).open()
 				}
 
 				return true
@@ -90,12 +90,27 @@ export default class LayoutManager extends Plugin {
 
 	layoutManagingCheckCmd(cb: (cont: SavedContainerData) => void): (checking: boolean) => boolean {
 		return (checking: boolean): boolean => {
-			const cont = this.getCurrentLayout()
-			if (!cont) {
-				return false
+			let foundPath: string | undefined
+
+			const leaves = this.app.workspace.getLeavesOfType('file')
+			for (const l of leaves) {
+				if (!l || !(l.view instanceof FileView) || !l.view.file) continue
+				const p = l.view.file.path
+				if (foundPath) {
+					if (foundPath == p) continue
+					return false
+				}
+
+				foundPath = p
 			}
 
-			if (!checking) cb(cont)
+			if (!checking) {
+				const cont = this.getCurrentLayout()
+				if (!cont) {
+					return false
+				}
+				cb(cont)
+			}
 
 			return true
 		}
