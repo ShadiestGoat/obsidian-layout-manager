@@ -43,14 +43,16 @@ export type LayoutData = {
 export function targetedLayout(
 	l: AnyContainer,
 	f: string,
+	fileCb: (id: string) => void,
 ): AnyContainer {
 	if (l.type != 'leaf') {
-		l.children?.forEach((c) => targetedLayout(c, f))
+		l.children?.forEach((c) => targetedLayout(c, f, fileCb))
 		return l
 	}
 
 	if (l.state.type == 'markdown') {
 		l.state.state.file = f
+		fileCb(l.id)
 	}
 
 	return l
