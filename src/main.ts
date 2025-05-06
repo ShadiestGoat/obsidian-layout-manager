@@ -7,7 +7,7 @@ import {
 	type SavedLayout,
 	type SettingData
 } from './settings'
-import { NewLayoutModal, OverrideLayoutModal, LoadLayoutModal } from './modals'
+import { NewLayoutModal, PickLayoutModal } from './modals'
 import { minimatch } from 'minimatch'
 import { StateMgr } from './currentLayout'
 
@@ -51,7 +51,7 @@ export default class LayoutManager extends Plugin {
 			id: 'override-layuout',
 			name: 'Override Layout',
 			checkCallback: this.layoutManagingCheckCmd((cont) => {
-				new OverrideLayoutModal(this.app, this.settings, (sv) => {
+				new PickLayoutModal(this.app, this.settings, "Override layout", (sv) => {
 					Object.assign(sv, cont)
 					this.saveSettings()
 				}).open()
@@ -68,7 +68,7 @@ export default class LayoutManager extends Plugin {
 				}
 				if (!checking) {
 					const path = activeFile.path
-					new LoadLayoutModal(this.app, this.settings, (sv) => {
+					new PickLayoutModal(this.app, this.settings, "Load layout", (sv) => {
 						this.loadLayout(sv, path)
 					}).open()
 				}

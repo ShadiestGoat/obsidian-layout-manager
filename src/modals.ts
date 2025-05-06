@@ -1,9 +1,8 @@
 import type { App } from 'obsidian'
-import { Modal, Notice } from 'obsidian'
+import { FuzzySuggestModal, Modal } from 'obsidian'
 import { mount, unmount, type Component } from 'svelte'
 import type { PlatformMode, SavedLayout, SettingData } from './settings'
 import NewLayout from './components/modals/NewLayout.svelte'
-import PickLayout from './components/modals/PickLayout.svelte'
 import Confirmation from './components/modals/Confirmation.svelte'
 
 abstract class genericSvelteModal<
@@ -58,42 +57,32 @@ export class NewLayoutModal extends genericSvelteModal<NewLayoutCallback, typeof
 	component = NewLayout
 }
 
-export type PickLayoutCallback = (name: string) => void
+export type PickLayoutCallback = (layout: SavedLayout) => void
+export class PickLayoutModal extends FuzzySuggestModal<SavedLayout> {
+	settings: SettingData
+	cb: PickLayoutCallback
 
-abstract class PickLayoutModal extends genericSvelteModal<PickLayoutCallback, typeof PickLayout> {
-	component = PickLayout
-
-	constructor(app: App, settings: SettingData, cb: (l: SavedLayout) => void) {
-		super(app, (name) => {
-			const i = settings.findIndex((s) => s.name == name)
-			if (i == -1) {
-				new Notice("Can't find this layout")
-				return
-			}
-			cb(settings[i])
-		}, {
-			options: settings.map(o => o.name)
-		})
-		console.log("Post props", this.props)
+	constructor(app: App, settings: SettingData, title: string, cb: PickLayoutCallback) {
+		super(app)
+		this.settings = settings
+		this.cb = cb
+		this.setPlaceholder(title)
 	}
-}
 
-export class LoadLayoutModal extends PickLayoutModal {
-	title = 'Pick layout'
-	props = {
-		submitText: 'Load'
+	getItems(): SavedLayout[] {
+		return this.settings
 	}
-}
 
-export class OverrideLayoutModal extends PickLayoutModal {
-	title = 'Override layout'
-	props = {
-		submitText: 'Save'
+	getItemText({ name }: SavedLayout): string {
+		return name
+	}
+
+	onChooseItem(layout: SavedLayout) {
+		this.cb(layout)
 	}
 }
 
 export type ConfirmationModalCallback = (confirmed: boolean) => void
-
 export class ConfirmModal extends genericSvelteModal<
 	ConfirmationModalCallback,
 	typeof Confirmation
