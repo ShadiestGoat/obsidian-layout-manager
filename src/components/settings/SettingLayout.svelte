@@ -141,7 +141,7 @@
 			<textarea bind:value={option.patterns} placeholder="Patterns (glob)"></textarea>
 		</SettingItem>
 
-		<SettingItem name="Platform Mode" desc="Restrict this layout to only certain platforms">
+		<SettingItem name="Platform mode" desc="Restrict this layout to only certain platforms">
 			<PlatformDropdown bind:value={option.platformMode} />
 		</SettingItem>
 	</div>

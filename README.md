@@ -40,7 +40,7 @@ Workspaces don't offer a contextual layout feature, but rather a static 'this is
 ### Creating a layout
 
 1. Open a file (preferably one that isn't managed)
-2. Create the layout you want - splits, tabs, editor mode, etc. Make sure it is only 1 file that is open
+2. Create the layout you want - splits, tabs, editor mode, non-file views etc. Make sure it is only 1 file that is open
 3. Run the command `Layout Manager: Save Layout` (or if you wish to override an existing layout, `Layout Manager: Override Layout`)
 4. Set the needed globs, platform etc
 5. Save the layout
