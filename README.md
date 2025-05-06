@@ -2,7 +2,7 @@
 
 Set your [Obsidian](https://obsidian.md) layout given a file context
 
-> [!NOTE] What is a layout?
+> [!NOTE]
 > This project uses ther term 'layout' to describe the positions, sizes, groupping & file view mode of tabs in the main view.
 
 ![Preview Document](./github/preview.gif)
@@ -20,7 +20,7 @@ Set your [Obsidian](https://obsidian.md) layout given a file context
 - Glob file matching
 - Adhoc loading of a layout
 
-> [!WARNING] Restrictions
+> [!WARNING]
 > Due to the *file context based* nature of this plugin, a layout can only have 1 file.
 >
 > Mobile re-organizes splits to be tabs, can't do anything about that :/
