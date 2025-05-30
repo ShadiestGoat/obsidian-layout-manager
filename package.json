@@ -1,6 +1,6 @@
 {
 	"name": "layout-manager",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "Manage layouts with context",
 	"main": "main.js",
 	"type": "module",
