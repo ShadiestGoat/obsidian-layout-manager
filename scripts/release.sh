@@ -1,10 +1,28 @@
+#!/usr/bin/env bash
 set -euo pipefail
 
 base="$(dirname $0)"
 
 gh auth status
 
-new_version=$(yq '.version' "$base"/../package.json -oy)
+cur_version=$(yq '.version' "$base"/../package.json -oy)
+ver_split=(${cur_version//./ })
+
+ver_type=`gum choose \
+	--header 'What kind of version bump is this?' \
+	"Breaking ($((${ver_split[0]}+1)).${ver_split[1]}.${ver_split[2]})" \
+	"Feature (${ver_split[0]}.$((${ver_split[1]}+1)).${ver_split[2]})" \
+	"Bugfix (${ver_split[0]}.${ver_split[1]}.$((${ver_split[2]}+1)))"
+`
+new_version=${ver_type#* }
+new_version=${new_version#(}
+new_version=${new_version%)}
+
+if ! gum confirm "So, bump $cur_version to ${new_version}?"; then
+	exit
+fi
+
+yq ".version=\"$new_version\"" "$base"/../package.json -ioj
 yq ".version=\"$new_version\"" "$base"/../manifest.json -ioj
 
 min_app=$(yq '.minAppVersion' "$base"/../manifest.json -oy)
