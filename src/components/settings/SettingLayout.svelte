@@ -64,7 +64,7 @@
 							use:setIcon={'chevrons-up'}
 							{...buttonInteraction(() => changeOrder(0))}
 							class="mod-cta"
-							aria-label="Priorotize to top"
+							aria-label="Prioritize to top"
 							disabled={currentI == 0}
 						></button>
 					{/if}
@@ -72,14 +72,14 @@
 						use:setIcon={'chevron-up'}
 						{...buttonInteraction(() => changeOrder(currentI - 1))}
 						class="mod-cta"
-						aria-label="Priorotize"
+						aria-label="Prioritize"
 						disabled={currentI == 0}
 					></button>
 					<button
 						use:setIcon={'chevron-down'}
 						{...buttonInteraction(() => changeOrder(currentI + 1))}
 						class="mod-cta"
-						aria-label="Depriorotize"
+						aria-label="Deprioritize"
 						disabled={currentI == size - 1}
 					></button>
 					{#if size > 2}
@@ -87,7 +87,7 @@
 							use:setIcon={'chevrons-down'}
 							{...buttonInteraction(() => changeOrder(size - 1))}
 							class="mod-cta"
-							aria-label="Depriorotize to bottom"
+							aria-label="Deprioritize to bottom"
 							disabled={currentI == size - 1}
 						></button>
 					{/if}
@@ -119,7 +119,7 @@
 							editingTitle = true
 							tmpValue = option.name
 						})}
-						aria-label="Being editing name"
+						aria-label="Edit name"
 					></button>
 				{/if}
 

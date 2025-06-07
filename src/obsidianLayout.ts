@@ -67,7 +67,7 @@ export function savableLayout(
 	fileSet: Set<string>,
 	leafCb: (id: string) => void,
 ): AnyContainer {
-	// This is basically js referance abuse, which is always fun & reliable & easy to debug :3
+	// This is basically js reference abuse, which is always fun & reliable & easy to debug :3
 	if (l.type == 'leaf') {
 		leafCb(l.id)
 

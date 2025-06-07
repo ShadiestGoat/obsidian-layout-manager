@@ -26,7 +26,7 @@ export default class LayoutManager extends Plugin {
 
 		this.addCommand({
 			id: 'save-layout',
-			name: 'Save Layout',
+			name: 'Save layout',
 			checkCallback: this.layoutManagingCheckCmd((cont) => {
 				new NewLayoutModal(
 					this.app,
@@ -48,8 +48,8 @@ export default class LayoutManager extends Plugin {
 		})
 
 		this.addCommand({
-			id: 'override-layuout',
-			name: 'Override Layout',
+			id: 'override-layout',
+			name: 'Override layout',
 			checkCallback: this.layoutManagingCheckCmd((cont) => {
 				new PickLayoutModal(this.app, this.settings, "Override layout", (sv) => {
 					Object.assign(sv, cont)
@@ -59,8 +59,8 @@ export default class LayoutManager extends Plugin {
 		})
 
 		this.addCommand({
-			id: 'load-layuout',
-			name: 'Load Adhoc Layout',
+			id: 'load-layout',
+			name: 'Load adhoc layout',
 			checkCallback: (checking) => {
 				const activeFile = this.app.workspace.getActiveFile()
 				if (!activeFile) {
