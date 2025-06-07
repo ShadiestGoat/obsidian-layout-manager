@@ -1,4 +1,4 @@
-import { FileView, Notice, Platform, Plugin } from 'obsidian'
+import { FileView, MarkdownView, Notice, Platform, Plugin } from 'obsidian'
 import { savableLayout } from './obsidianLayout'
 import {
 	LayoutMgrSettings,
@@ -165,25 +165,21 @@ export default class LayoutManager extends Plugin {
 
 	getCurrentLayout(): SavedContainerData | null {
 		const fileSet = new Set<string>()
-		const leafIds: string[] = []
+		const leafIds = new Set<string>()
 		const layoutData = this.app.workspace.rootSplit.serialize()
-		let activeId: string | undefined
 
-		const layout = savableLayout(layoutData, fileSet, (id) => {
-			leafIds.push(id)
-			if (id === this.app.workspace.activeLeaf?.id) {
-				activeId = id
-			}
-		})
+		const layout = savableLayout(layoutData, fileSet, leafIds)
 		if (fileSet.size > 1) {
 			new Notice("Can't save: multiple files found in layout")
 			return null
 		}
 
+		const active = this.app.workspace.getActiveViewOfType(MarkdownView)
+
 		return {
 			container: layout,
-			activeId,
-			leafIds
+			activeId: active ? active.leaf.id : undefined,
+			leafIds: Array.from(leafIds)
 		}
 	}
 

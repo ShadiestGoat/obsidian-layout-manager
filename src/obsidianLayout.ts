@@ -65,11 +65,11 @@ export function targetedLayout(
 export function savableLayout(
 	l: AnyContainer,
 	fileSet: Set<string>,
-	leafCb: (id: string) => void,
+	leafSet: Set<string>,
 ): AnyContainer {
 	// This is basically js reference abuse, which is always fun & reliable & easy to debug :3
 	if (l.type == 'leaf') {
-		leafCb(l.id)
+		leafSet.add(l.id)
 
 		if (l.state.type == 'markdown') {
 			fileSet.add(l.state.state.file)
@@ -86,7 +86,7 @@ export function savableLayout(
 			}
 		}
 	} else {
-		l.children?.forEach((c) => savableLayout(c, fileSet, leafCb))
+		l.children?.forEach((c) => savableLayout(c, fileSet, leafSet))
 	}
 
 	return l
