@@ -41,21 +41,22 @@ export type LayoutData = {
  * @param setActive When an active leaf is found, it will call this cb
  */
 export function targetedLayout(
-	l: AnyContainer,
+	c: AnyContainer,
 	f: string,
-	fileCb: (id: string) => void,
+	leafCB: (l: GenericContainer<'leaf'>) => void,
 ): AnyContainer {
-	if (l.type != 'leaf') {
-		l.children?.forEach((c) => targetedLayout(c, f, fileCb))
-		return l
+	if (c.type != 'leaf') {
+		c.children?.forEach((c) => targetedLayout(c, f, leafCB))
+		return c
 	}
 
-	if (l.state.type == 'markdown') {
-		l.state.state.file = f
-		fileCb(l.id)
+	if (c.state.type == 'markdown') {
+		c.state.state.file = f
 	}
 
-	return l
+	leafCB(c)
+
+	return c
 }
 
 /**

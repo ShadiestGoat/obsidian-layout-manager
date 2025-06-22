@@ -1,20 +1,36 @@
 import type { WorkspaceLeaf } from 'obsidian'
-import { FileView, Platform, setIcon, type App } from 'obsidian'
+import { FileView, MarkdownView, Platform, setIcon, type App } from 'obsidian'
 import { targetedLayout } from './obsidianLayout'
 import type { SavedLayout } from './settings'
+
+const symOgIcon = Symbol('Icon before Layout Manager set it')
 
 export class StateMgr {
 	file = ''
 	name = ''
 
 	private active = false
-	private leaves = new Set<string>()
+	/**
+	 * id -> path OR ///View:ViewTypeHere
+	 */
+	private leafTargetStates = new Map<string, string>()
 
 	private app: App
-	leafState = new Map<string, string>()
+	private leafState = new Map<string, string>()
 
-	constructor(app: App) {
+	private shouldManageIcons: boolean
+
+	constructor(app: App, shouldManageIcons: boolean) {
 		this.app = app
+		this.shouldManageIcons = shouldManageIcons
+	}
+
+	private setAllIcons(add: boolean) {
+		if (!this.shouldManageIcons && add) return
+
+		this.leafTargetStates.forEach((_, id) => {
+			this.manageOriginalIcon(id, add)
+		})
 	}
 
 	private manageOriginalIcon(id: string, add: boolean) {
@@ -22,23 +38,27 @@ export class StateMgr {
 		if (!l) return
 
 		l.tabHeaderInnerIconEl.toggleClass('lm-original', add)
-		const icon = add ? 'layout-dashboard' : 'file'
+		const icon = add ? 'layout-dashboard' : symOgIcon in l.view ? l.view[symOgIcon] as string : 'file'
+
+		if (add) {
+			// @ts-expect-error I'm not typing this
+			l.view[symOgIcon] = l.view.icon
+		} else {
+			// @ts-expect-error I'm not typing this
+			delete l.view[symOgIcon]
+		}
 
 		l.view.icon = icon
-		setIcon(l.tabHeaderInnerIconEl, add ? 'layout-dashboard' : 'file')
+		setIcon(l.tabHeaderInnerIconEl, icon)
 	}
 
 	/**
 	 * Check if layout integrity is broken, given current diffs
 	 */
 	isLayoutIntegrityGood(diffs: Record<string, [string | undefined, string | undefined]>): boolean {
-		for (const id of this.leaves) {
-			if (!diffs[id]) {
-				continue
-			}
-
-			// One of the originals was removed: 'layout integrety' is broken
-			if (diffs[id][1] === undefined) {
+		for (const [id, target] of this.leafTargetStates) {
+			// One of the originals was changed: 'layout integrity' is broken
+			if (id in diffs && diffs[id][1] !== target) {
 				return false
 			}
 		}
@@ -50,14 +70,20 @@ export class StateMgr {
 	 * Update the actual layout in obsidian
 	 * @returns the new file leaf Ids
 	 */
-	private async updateObsidianLayout(path: string, layout: SavedLayout): Promise<string[]> {
+	private async updateObsidianLayout(path: string, layout: SavedLayout): Promise<Map<string, string>> {
 		// Note on impl: the goal of this function is to mimic what obsidian does in updateLayout,
 		// but non-blocking & only affecting the main panel
 
-		const fileLeafIds: string[] = []
-		const main = targetedLayout(layout.container, path, (id) => {
-			fileLeafIds.push(id)
+		const newState = new Map<string, string>()
+		const main = targetedLayout(layout.container, path, l => {
+			if (l.state.state?.file) {
+				newState.set(l.id, l.state.state?.file)
+			} else {
+				newState.set(l.id, "///View:" + l.state.type)
+			}
 		})
+		this.leafTargetStates = new Map(newState.entries())
+		console.log("Leaf target state is updated", this.leafTargetStates)
 
 		const w = this.app.workspace
 
@@ -91,7 +117,7 @@ export class StateMgr {
 		w.onLayoutChange()
 		w.requestActiveLeafEvents()
 
-		return fileLeafIds
+		return newState
 	}
 
 	/**
@@ -101,11 +127,16 @@ export class StateMgr {
 		const curState = new Map<string, string>()
 
 		this.app.workspace.iterateRootLeaves((l) => {
-			if (!l || !(l.view instanceof FileView) || !l.view.file) {
+			if (!l) {
 				return
 			}
-
-			curState.set(l.id, l.view.file?.path)
+			if (l.view instanceof FileView) {
+				if (l.view.file) {
+					curState.set(l.id, l.view.file.path)
+				}
+			} else {
+				curState.set(l.id, "///View:" + l.view.getViewType())
+			}
 		})
 
 		const diffs: Record<string, [string | undefined, string | undefined]> = {}
@@ -136,48 +167,43 @@ export class StateMgr {
 	 */
 	shouldUpdate(): string | null {
 		const diffs = this.updateState()
+		let integrityBroke = false
 
 		if (this.active && !this.isLayoutIntegrityGood(diffs)) {
-			this.setNotActive()
-			return null
-		}
-
-		// Ensure that icons are reset
-		this.leaves.forEach(id => {
-			this.manageOriginalIcon(id, true)
-		})
-
-		// Don't care about closed tabs if not in a managed layout
-		if (!this.active && Object.values(diffs).filter((v) => v[1] !== undefined).length === 0) {
-			return null
+			integrityBroke = true
+		} else {
+			this.setAllIcons(true)
+			// Don't care about closed tabs if not in a managed layout
+			if (!this.active && Object.values(diffs).filter((v) => v[1] !== undefined).length === 0) {
+				return null
+			}
 		}
 
 		for (const leafId in diffs) {
 			const newPath = diffs[leafId][1]
 			if (!newPath) continue
 
-			if (this.active) {
+			if (this.active && !integrityBroke) {
 				if (newPath == this.file || diffs[leafId][0] === undefined) continue
 			}
 
 			return newPath
 		}
 
+		if (integrityBroke) {
+			this.setNotActive()
+		}
+
 		return null
 	}
 
 	async update(sv: SavedLayout, path: string) {
-		const fileLeaves = await this.updateObsidianLayout(path, sv)
+		this.leafState = await this.updateObsidianLayout(path, sv)
 
-		this.leafState.clear()
-		fileLeaves.forEach((id) => {
-			this.leafState.set(id, path)
-		})
+		// Reset again, just in case
+		this.leafTargetStates = new Map(this.leafState.entries())
 
-		this.leaves = new Set(sv.leafIds)
-		this.leaves.forEach((id) => {
-			this.manageOriginalIcon(id, true)
-		})
+		this.setAllIcons(true)
 
 		this.active = true
 		this.file = path
@@ -190,9 +216,18 @@ export class StateMgr {
 
 	setNotActive() {
 		this.active = false
-		this.leaves.forEach(l => {
-			this.manageOriginalIcon(l, false)
-		})
-		this.leaves.clear()
+		this.setAllIcons(false)
+		this.leafTargetStates.clear()
+	}
+
+	setManageIcons(newVal: boolean) {
+		if (newVal == this.shouldManageIcons) {
+			return
+		}
+
+		this.shouldManageIcons = newVal
+		if (this.active) {
+			this.setAllIcons(newVal)
+		}
 	}
 }

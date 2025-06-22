@@ -24,7 +24,15 @@ export type SavedLayout = {
 	patterns: string
 } & SavedContainerData
 
-export type SettingData = SavedLayout[]
+export type SettingData = {
+	manageIcons: boolean
+	layouts: SavedLayout[]
+}
+
+export const DEFAULT_SETTINGS: SettingData = {
+	manageIcons: true,
+	layouts: []
+}
 
 export class LayoutMgrSettings extends PluginSettingTab {
 	svelteContent: Settings
@@ -41,6 +49,17 @@ export class LayoutMgrSettings extends PluginSettingTab {
 
 		const settingProxy = writable(this.plugin.settings)
 		settingProxy.subscribe((v) => {
+			this.plugin.curLayout.setManageIcons(v.manageIcons)
+			if (this.plugin.curLayout.isActive()) {
+				// Renamed/deleted
+				// Maybe on rename we shouldn't but meh
+				const activeLayout = this.plugin.settings.layouts.find(l => l.name == this.plugin.curLayout.name)
+				if (!activeLayout) {
+					this.plugin.curLayout.setNotActive()
+				}
+			}
+
+			// Just in case, but its already proxied so it should be fine
 			this.plugin.settings = v
 			this.plugin.saveSettings()
 		})

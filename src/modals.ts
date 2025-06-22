@@ -70,7 +70,7 @@ export class PickLayoutModal extends FuzzySuggestModal<SavedLayout> {
 	}
 
 	getItems(): SavedLayout[] {
-		return this.settings
+		return this.settings.layouts
 	}
 
 	getItemText({ name }: SavedLayout): string {

@@ -48,7 +48,7 @@
 		{#if editingTitle}
 			<input bind:value={tmpValue} type="text" placeholder="Name" />
 		{:else}
-			<h3>{option.name}</h3>
+			<h2>{option.name}</h2>
 		{/if}
 	</summary>
 

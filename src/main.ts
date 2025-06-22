@@ -1,6 +1,7 @@
 import { FileView, MarkdownView, Notice, Platform, Plugin } from 'obsidian'
 import { savableLayout } from './obsidianLayout'
 import {
+	DEFAULT_SETTINGS,
 	LayoutMgrSettings,
 	PlatformMode,
 	type SavedContainerData,
@@ -21,8 +22,8 @@ export default class LayoutManager extends Plugin {
 	curLayout: StateMgr
 
 	async onload(): Promise<void> {
-		this.curLayout = new StateMgr(this.app)
 		await this.loadSettings()
+		this.curLayout = new StateMgr(this.app, this.settings.manageIcons)
 
 		this.addCommand({
 			id: 'save-layout',
@@ -31,7 +32,7 @@ export default class LayoutManager extends Plugin {
 				new NewLayoutModal(
 					this.app,
 					(name, paths, platMode) => {
-						this.settings.push({
+						this.settings.layouts.push({
 							name,
 							patterns: paths
 								.split('\n')
@@ -42,7 +43,7 @@ export default class LayoutManager extends Plugin {
 						})
 						this.saveSettings()
 					},
-					{ otherNames: this.settings.map((s) => s.name) }
+					{ otherNames: this.settings.layouts.map((s) => s.name) }
 				).open()
 			})
 		})
@@ -135,7 +136,7 @@ export default class LayoutManager extends Plugin {
 	}
 
 	findLayoutForPath(p: string): SavedLayout | null {
-		for (const opt of this.settings) {
+		for (const opt of this.settings.layouts) {
 			if (opt.platformMode == PlatformMode.COMPUTER && !Platform.isDesktop) {
 				continue
 			}
@@ -158,9 +159,16 @@ export default class LayoutManager extends Plugin {
 	}
 
 	async loadSettings() {
-		const d = (await this.loadData()) ?? []
+		let d = (await this.loadData()) ?? DEFAULT_SETTINGS
+		if (d && Array.isArray(d)) {
+			// Old format, migrate it
+			d = {
+				layouts: d
+			}
+			this.saveData(d)
+		}
 
-		this.settings = Array.isArray(d) ? d : []
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, d)
 	}
 
 	getCurrentLayout(): SavedContainerData | null {
