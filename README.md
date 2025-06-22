@@ -39,17 +39,30 @@ Workspaces don't offer a contextual layout feature, but rather a static 'this is
 
 ### Creating a layout
 
-1. Open a file (preferably one that isn't managed)
-2. Create the layout you want - splits, tabs, editor mode, non-file views etc. Make sure it is only 1 file that is open
+1. Open a file
+2. Create the layout you want - splits, tabs, editor mode, non-markdown-file views etc. Make sure it is only 1 markdown file that is open
 3. Run the command `Layout Manager: Save Layout` (or if you wish to override an existing layout, `Layout Manager: Override Layout`)
-4. Set the needed globs, platform etc
-5. Save the layout
+4. In the modal, select the needed options
+	 - [How to use glob patterns](https://www.malikbrowne.com/blog/a-beginners-guide-glob-patterns/)
+5. Click the save button
 
 ### Using a layout
 
 Simply open a file that is covered by a glob pattern. This will trigger that layout
 
 You can also open any saved layout by running `Layout Manger: Load Adhoc Layout`, then selecting a layout
+
+### Opening another markdown file in an existing layout
+
+If you have a layout that is active, you can still open another markdown file (without triggering the layout for that file). Simply open it in a new tab, while the layout "has integrity".
+
+You should be able to tell if the layout integrity is intact by seeing the icon of the tab(s) that are part of the layout. The below image is an example of a tab that has layout integrity
+
+![tab with layout integrity](./github/integrity.png)
+
+If you do not see an icon (and the option to enable icons is enabled), then the layout integrity is broken & opening a new file, even in a new tab, will trigger the appropriate layout.
+
+Layout Integrity is kept for as long as all tabs that were opened as part of the layout as open & contain the same view as is in the layout. So closing a tab or changing the file that opened in the tab breaks layout integrity.
 
 ## Contributing
 
